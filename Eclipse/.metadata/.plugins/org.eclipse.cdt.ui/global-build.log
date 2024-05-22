@@ -1,0 +1,75 @@
+19:58:11 **** Build of configuration Debug for project MC2 ****
+make all 
+Building file: ../BUZZER.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"BUZZER.d" -MT"BUZZER.o" -c -o "BUZZER.o" "../BUZZER.c"
+Finished building: ../BUZZER.c
+ 
+Building file: ../DC_MOTOR.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"DC_MOTOR.d" -MT"DC_MOTOR.o" -c -o "DC_MOTOR.o" "../DC_MOTOR.c"
+Finished building: ../DC_MOTOR.c
+ 
+Building file: ../EEPROM.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"EEPROM.d" -MT"EEPROM.o" -c -o "EEPROM.o" "../EEPROM.c"
+Finished building: ../EEPROM.c
+ 
+Building file: ../GPIO.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"GPIO.d" -MT"GPIO.o" -c -o "GPIO.o" "../GPIO.c"
+Finished building: ../GPIO.c
+ 
+Building file: ../I2C.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"I2C.d" -MT"I2C.o" -c -o "I2C.o" "../I2C.c"
+Finished building: ../I2C.c
+ 
+Building file: ../LCD.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"LCD.d" -MT"LCD.o" -c -o "LCD.o" "../LCD.c"
+Finished building: ../LCD.c
+ 
+Building file: ../MainApp.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"MainApp.d" -MT"MainApp.o" -c -o "MainApp.o" "../MainApp.c"
+Finished building: ../MainApp.c
+ 
+Building file: ../TIMER1.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"TIMER1.d" -MT"TIMER1.o" -c -o "TIMER1.o" "../TIMER1.c"
+Finished building: ../TIMER1.c
+ 
+Building file: ../UART.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O2 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=8000000UL -MMD -MP -MF"UART.d" -MT"UART.o" -c -o "UART.o" "../UART.c"
+Finished building: ../UART.c
+ 
+Building target: MC2.elf
+Invoking: AVR C Linker
+avr-gcc -Wl,-Map,MC2.map -mmcu=atmega32 -o "MC2.elf"  ./BUZZER.o ./DC_MOTOR.o ./EEPROM.o ./GPIO.o ./I2C.o ./LCD.o ./MainApp.o ./TIMER1.o ./UART.o   
+Finished building target: MC2.elf
+ 
+Invoking: AVR Create Extended Listing
+avr-objdump -h -S MC2.elf  >"MC2.lss"
+Finished building: MC2.lss
+ 
+Create Flash image (ihex format)
+avr-objcopy -R .eeprom -R .fuse -R .lock -R .signature -O ihex MC2.elf  "MC2.hex"
+Finished building: MC2.hex
+ 
+Invoking: Print Size
+avr-size --format=avr --mcu=atmega32 MC2.elf
+AVR Memory Usage
+----------------
+Device: atmega32
+
+Program:    7940 bytes (24.2% Full)
+(.text + .data + .bootloader)
+
+Data:        298 bytes (14.6% Full)
+(.data + .bss + .noinit)
+
+
+Finished building: sizedummy
+ 

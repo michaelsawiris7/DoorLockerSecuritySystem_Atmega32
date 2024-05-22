@@ -1,0 +1,244 @@
+/*
+ * MainApp.c
+ *
+ *  Created on: Mar 22, 2024
+ *      Author: ENG. MICHAEL SAMIR SAWIRIS
+ */
+//########## START ########## START ########## START ########## START ########## START ########## START ########## START ########## START ##########
+#include "UART.h"
+#include "GPIO.h"
+#include "EEPROM.h"
+#include "DC_MOTOR.h"
+#include "BUZZER.h"
+#include <util/delay.h>
+//####################################### GLOBAL VARIABLES ########################################################################
+uint8 text=1;
+static uint8 k =0;                                                       //Iterator
+//####################################### TEXT REPLACEMENT #######################################################################
+#define NO_PASSWORD 5                                                    //Maximum numbers of password
+#define EQUAL (1u)
+#define NOTEQUAL (0u)
+#define OPEN_DOOR (1u)
+#define CHANGE_PASSWORD (2u)
+#define FAULT_RESPONSE (0u)
+#define FIRstateTIME_START  (1u)
+//###############################################################################
+// Step One [ Create a System Password ]
+//###############################################################################
+uint8 StepOne(void)
+{
+	volatile uint8 R_password[NO_PASSWORD];                           //Recieved First Entered Password From User (array from 5 numbers)
+	volatile uint8 R_password2[NO_PASSWORD];                          //Recieved Re[Second] Entered Password From user for Confirmation
+	uint8 state=1;                                                    //State of Equality of two passwords (1-> EQUAL , 0 -> NOTEUQAL)
+
+// RECIEVING FIRST PASSWORD THROUGH UART
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		R_password[k]=UART_R();
+	}
+// RECIEVING SECOND PASSWORD THROUGH UART
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		R_password2[k]=UART_R();
+	}
+//COMPARING TWO PASSWORDS AND CHECK EQUALITY
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		if(R_password[k]!=R_password2[k])
+		{
+			state=NOTEQUAL;
+
+			UART_T(state);
+			return state;
+		}
+	}
+	if(state==EQUAL)
+	{
+		for(k=0;k<NO_PASSWORD;k++)
+		{
+			EEPROM_writeByte((EEPROM_ADDRESS)+k,R_password[k]);
+			_delay_ms(10);
+		}
+		UART_T(state);
+	}
+	return state;
+}
+
+
+uint8 StepThree(void)
+{
+	static uint8 counter=1;
+	uint8 data=0;
+	volatile  uint8 R_password[NO_PASSWORD];
+	uint8 state=1;
+
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		R_password[k]=UART_R();
+	}
+
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		EEPROM_readByte(EEPROM_ADDRESS+k,&data);
+		if(R_password[k]!=data)
+		{
+			state=0;
+			break;
+		}
+	}
+
+	if (state==1)
+	{
+		UART_T(1);
+		while(UART_R()!=8);
+		DC_MOTOR_ON();
+		_delay_ms(5000);
+
+		DC_MOTOR_OFF();
+		_delay_ms(3000);
+
+		DC_MOTOR_ON_CCW();
+		_delay_ms(5000);
+
+		DC_MOTOR_OFF();
+		return state;
+
+	}
+	else if (state ==0)
+	{
+		UART_T(0);
+		if (counter ==3)
+		{
+			while(UART_R()!=9);
+			BUZZER_ON();
+			_delay_ms(5000);
+
+			BUZZER_OFF();
+			return 2;
+			//step two
+		}
+		else
+		{
+			counter++;
+			_delay_ms(600);
+			return 0;
+
+		}
+	}
+
+}
+
+uint8 StepFour(void)
+{
+	static uint8 counter=1;
+	uint8 data=0;
+	volatile  uint8 R_password[NO_PASSWORD];
+	uint8 state=1;
+
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		R_password[k]=UART_R();
+	}
+
+	for(k=0;k<NO_PASSWORD;k++)
+	{
+		EEPROM_readByte(EEPROM_ADDRESS+k,&data);
+		if(R_password[k]!=data)
+		{
+			state=0;
+			break;
+		}
+	}
+
+
+	if (state==1)
+	{
+		UART_T(1);
+		//step1
+		//Task();
+		return state;
+
+	}
+	else
+	{
+		UART_T(0);
+		if (counter ==3)
+		{
+			while(UART_R()!=9);
+			BUZZER_ON();
+			_delay_ms(5000);
+
+			BUZZER_OFF();
+			return 2;
+			//step two
+		}
+		else
+		{
+			counter++;
+			return 0;
+		}
+	}
+
+}
+//######################## MAIN TASKS OF MC2 ##############################################################
+uint8 Tasks(uint8 Startt)
+{
+	uint8 Start=Startt;                      //Check Start (If is it First start or not ) for disp/not disp HELLO on LCD
+	volatile uint8 state;                    //RESPONSE FROM EACH STEP
+	volatile uint8 St1;                      //Step One
+	volatile uint8 St2;                      //Step Two
+//STEP_ONE  ##################################################################################################
+	if(Start==1)
+	{
+		St1=StepOne();
+		while (St1==0){St1=StepOne();}
+	}
+//WAITING RESPONSE FROM MC1 TO SELECT THE NEXT STEP ( STEP THREE OR STEP FOUR )
+	state=UART_R();
+
+	while (state!=3 && state!=4){state=UART_R();}
+//STEP_THREE  ##################################################################################################
+	if(state==3)
+	{
+		St2= StepThree();
+		while(St2==0){St2=StepThree();}
+
+
+	}
+//STEP_FOUR   ##################################################################################################
+	else if (state==4)
+	{
+		St2= StepFour();
+		while(St2==0){St2=StepFour();}
+
+	}
+
+	return St2;
+}
+//###########################################################################################################################
+//######################################## MAIN PROGRAM #####################################################################
+//###########################################################################################################################
+int main()
+{
+	UART_ConfigType UART1_S = {data_8,disable,one_bit,AsynchDoubleSpeedMode};
+	//I2C_ConfigType I2C_C= {A1,Fcpu_1};
+	//I2C_INIT(&I2C_C);
+	//UART_ConfigType UART1_M = {data_8,disable,one_bit,AsynchDoubleSpeedMode};
+//############### LOCAL VARIABLES ##########################################################################
+	uint8 start=1;
+	volatile uint8 state;                      //RESPONSE FROM EACH STEP
+//############# INIT OF EACH PERIPHRAL ###################################################################
+	UART_INIT(9600);
+	TWI_init();
+	DC_MOTOR_INIT();
+	BUZZER_INIT(PA,P0);
+//############# MAIN LOOP ####################################################################################
+	while(1)
+	{
+		state=Tasks(start);
+		if(state==1){start=1;}
+		else{start=0;}
+	}
+}
+//########## END ########## END ########## END ########## END ########## END ########## END ########## END ########## END ##########
+

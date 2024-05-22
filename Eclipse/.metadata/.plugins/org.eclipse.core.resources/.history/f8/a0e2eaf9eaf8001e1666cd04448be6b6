@@ -1,0 +1,219 @@
+/*
+ * GPIO.c
+ *
+ *  Created on: Mar 22, 2024
+ *      Author: Admin
+ */
+
+
+#include "GPIO.h"
+#include<avr/io.h>
+//**************************************************************************************************************************************
+void  DDR(uint8 Port,uint8 Pin,uint8 State)
+{
+
+	switch(Port)
+	{
+			case PA:
+				if (Pin==total)
+				{
+					DDRA=State;
+				}
+				else
+				{
+					if(State == OUTPUT)
+					{
+						SET_BIT(DDRA,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(DDRA,Pin);
+					}
+				}
+				break;
+		//###############################################################################################################################
+			case PB:
+				if (Pin==total)
+				{
+					DDRB=State;
+				}
+				else
+				{
+					if(State == OUTPUT)
+					{
+						SET_BIT(DDRB,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(DDRB,Pin);
+					}
+				}
+				break;
+		//###############################################################################################################################
+
+			case PC:
+				if (Pin==total)
+				{
+					DDRC=State;
+				}
+				else
+				{
+					if(State == OUTPUT)
+					{
+						SET_BIT(DDRC,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(DDRC,Pin);
+					}
+				}
+				break;
+		//###############################################################################################################################
+			case PD:
+				if (Pin==total)
+				{
+					DDRD=State;
+				}
+				else
+				{
+					if(State == OUTPUT)
+					{
+						SET_BIT(DDRD,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(DDRD,Pin);
+					}
+				}
+				break;
+	}
+}
+//**************************************************************************************************************************************
+void  PORT (uint8 Port,uint8 Pin,uint8 data)
+{
+	switch(Port)
+	{
+			case PA:
+				if (Pin==total)
+				{
+
+					PORTA=data;
+				}
+				else
+				{
+					if(data == LOGIC_HIGH)
+					{
+						SET_BIT(PORTA,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(PORTA,Pin);
+					}
+				}
+				break;
+//###############################################################################################################################
+			case PB:
+				if (Pin==total)
+				{
+
+					PORTA=data;
+				}
+				else
+				{
+					if(data == LOGIC_HIGH)
+					{
+						SET_BIT(PORTA,Pin);
+					}
+					else
+					{
+						CLEAR_BIT(PORTA,Pin);
+					}
+				}
+				break;
+//###############################################################################################################################
+			case PC:
+				if (Pin==total)
+				{
+
+				 PORTC=data;
+				 break;
+
+				}
+				else
+				{
+					switch (data)
+					{
+						case OFF: PORTC&=~(1<<Pin); break;
+						case ON:  PORTC|=(1<<Pin);  break;
+					}
+				}
+			break;
+
+			case PD:
+				if (Pin==total)
+				{
+
+				 PORTD=data;
+				 break;
+
+				}
+				else
+				{
+					switch (data)
+					{
+						case OFF: PORTD&=~(1<<Pin); break;
+						case ON:  PORTD|=(1<<Pin);  break;
+					}
+				}
+			break;
+	}
+}
+uint8 PIN  (uint8 Port,uint8 Pin)
+{
+	volatile uint8 RET;
+	switch(Port)
+	{
+	case PA:
+		if(Pin==total)
+		{
+		RET=PINA;
+		}
+		else
+		{
+		RET=GET_BIT(PINA,Pin);
+		}
+		break;
+	case PB:
+		if(Pin==total)
+		{
+		RET=PINB;
+		}
+		else
+		{
+		RET=GET_BIT(PINB,Pin);  //PINB&(1<<pi);
+		}
+		break;
+	case PC:
+		if(Pin==total)
+		{
+		RET=PINC;
+		}
+		else
+		{
+		RET=GET_BIT(PINC,Pin);
+		}
+		break;
+	case PD:
+		if(Pin==total)
+		{
+		RET=PIND;
+		}
+		else
+		{
+		RET=GET_BIT(PIND,Pin);
+		}
+		break;
+	}
+	return RET;
+}
+

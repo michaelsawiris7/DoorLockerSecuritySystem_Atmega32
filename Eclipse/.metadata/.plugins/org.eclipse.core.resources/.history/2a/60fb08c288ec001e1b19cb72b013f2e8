@@ -1,0 +1,323 @@
+/*
+ * MainApp.c
+ *
+ *  Created on: Mar 22, 2024
+ *      Author: ENG. MICHAEL SAMIR SAWIRIS NAGUIB
+ */
+//########## START ########## START ########## START ########## START ########## START ########## START ########## START ########## START ##########
+#include "LCD.h"
+#include "GPIO.h"
+#include "UART.h"
+#include "KEYPAD.h"
+#include <util/delay.h>
+#include "TIMER1.h"
+//####################################### GLOBAL VARIABLES ########################################################################
+uint8 text=1;
+static uint8 i =0;                                                       //Iterator
+uint8 tick=0;
+//####################################### TEXT REPLACEMENT #######################################################################
+#define NO_PASSWORD 5                                                    //Maximum numbers of password
+#define EQUAL (1u)
+#define NOTEQUAL (0u)
+#define OPEN_DOOR (1u)
+#define CHANGE_PASSWORD (2u)
+#define FAULT_RESPONSE (0u)
+#define FIRST_TIME_START  (1u)
+
+void  CallBackTimer(void)
+{
+	tick++;
+}
+//###############################################################################
+// Step One [ Create a System Password ]
+//###############################################################################
+uint8 StepOne(void)
+{
+	volatile uint8 EnteredPassword[NO_PASSWORD];                          //First Entered Password From User (array from 5 numbers)
+	volatile uint8 ReEnteredPassword[NO_PASSWORD];                        //Re[Second] Entered Password From user for Confirmation
+	volatile uint8 CheckEQ;                                               //Return Value from MC2 to check the Equality of two passwords[0 (NOT EQUAL) or 1 (EQUAL) ]
+//DISPLAYING ON LCD TO ENTER THE PASSWORD TO BE CREATED
+	LCD_CLEAR();
+	_delay_ms(600);
+	LCD_STR_R_C(0,0,"Please Enter the");
+	LCD_STR_R_C(1,0,"Password:");
+//RECIEVING FROM USER Through KEYPAD & SENDING FIRST PASSWORD THROUGH UART
+	for(i=0;i<NO_PASSWORD;i++)
+	{
+		EnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		UART_T(EnteredPassword[i]);
+		_delay_ms(1000);
+	}
+//DISPLAYING PRESS ON ANY KEY TO CONTINUE
+	LCD_CLEAR();
+	LCD_STR_R_C(0,0,"Press on any key");
+	LCD_STR_R_C(1,0,"to continue.");
+	while(KEYPAD()<0);
+//DISPLAYING ON LCD TO RE-ENTER THE PASSWORD TO BE CREATED
+	LCD_CLEAR();
+	_delay_ms(600);
+	LCD_STR_R_C(0,0,"Plz Re-Enter the");
+	LCD_STR_R_C(1,0,"Password:");
+//RECIEVING FROM USER Through KEYPAD & SENDING FIRST PASSWORD THROUGH UART
+	for(i=0;i<NO_PASSWORD;i++)
+	{
+		ReEnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		UART_T(ReEnteredPassword[i]);
+		_delay_ms(1000);
+
+	}
+//DISPLAYING PRESS ON ANY KEY TO CONTINUE
+	LCD_CLEAR();
+	LCD_STR_R_C(0,0,"Press on any key");
+	LCD_STR_R_C(1,0,"to continue.");
+	while(KEYPAD()<0);
+//WAITING THE RESPONSE FROM MC2 TO CHECK EQUALITY
+	CheckEQ=UART_R();             //1 -> EQUAL     // 0 -> NOT EQUAL
+	return CheckEQ;
+}
+//###############################################################################
+// Step Two [ Main Options ]
+//###############################################################################
+uint8 StepTwo(void)
+{
+	volatile uint8 state;
+//DISPLAYING + FOR OPEN DOOR    - CHANGE PASSWORD
+	LCD_CLEAR();
+	LCD_STR_R_C(0,0,"+ : Open Door   ");
+	LCD_STR_R_C(1,0,"- : Change Pass ");
+//WAITING RESPONSE FROM USER
+	state=KEYPAD();
+	if(state=='+')
+	{
+		return OPEN_DOOR;
+	}
+	else if (state=='-')
+	{
+		return CHANGE_PASSWORD;
+	}
+	else
+	{
+		return FAULT_RESPONSE;
+	}
+}
+//###############################################################################
+// Step Three [ User Entered (+) for Open the door  ]
+//###############################################################################
+uint8 StepThree(void)
+{
+	volatile uint8 EnteredPassword[NO_PASSWORD];                          //Entered Password From User (array from 5 numbers)
+	static uint8 counter=1;                                               //Counter to count the wrong input password from user
+	volatile uint8 CheckEQ;                                               //Return Value from MC2 to check the Equality of two passwords[0 (NOT EQUAL) or 1 (EQUAL) ]
+//DISPLAYING ON LCD TO ENTER THE PASSWORD
+	LCD_CLEAR();
+	_delay_ms(600);
+	LCD_STR_R_C(0,0,"Please enter the");
+	LCD_STR_R_C(1,0,"password:");
+//RECIEVING FROM USER Through KEYPAD & SENDING FIRST PASSWORD THROUGH UART
+	for(i=0;i<NO_PASSWORD;i++)
+	{
+		EnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		UART_T(EnteredPassword[i]);
+		_delay_ms(1000);
+
+	}
+//DISPLAYING PRESS ON ANY KEY TO CONTINUE
+	LCD_CLEAR();
+	LCD_STR_R_C(0,0,"Press on any key");
+	LCD_STR_R_C(1,0,"to continue.");
+	while(KEYPAD()<0);
+//WAITING THE RESPONSE FROM MC2 TO CHECK EQUALITY
+	CheckEQ=UART_R();
+	_delay_ms(100);
+//########################################################
+	if(CheckEQ==EQUAL)                    //IN CASE OF EQUAL PASSWORDS
+	{
+		UART_T(8);
+		LCD_CLEAR();
+		LCD_STR_R_C(0,0,"Door's Unlocking");
+		//_delay_ms(5000);
+		StartTimer();
+		while(tick!=1830);tick=0;
+
+		LCD_CLEAR();
+		LCD_STR_R_C(0,0,"Stopped");
+		StartTimer();
+		while(tick!=366);tick=0;
+		//_delay_ms(3000);
+
+		LCD_CLEAR();
+		LCD_STR_R_C(0,0,"Door's locking  ");
+		StartTimer();
+		while(tick!=1830);tick=0;
+
+		LCD_CLEAR();
+		_delay_ms(1000);
+
+		return CheckEQ;
+	}
+	else if(CheckEQ==NOTEQUAL)                                  //IN CASE OF NOT-EQUAL PASSWORDS
+	{
+		if (counter ==3)
+		{
+			UART_T(9);
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"ERROR");
+			//Buzzer on
+			_delay_ms(5000);
+			LCD_CLEAR();
+			//buzzer off
+			text=0;
+
+			return 2;
+			//step two
+		}
+		else
+		{
+			counter++;
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"Not the same");
+			LCD_STR_R_C(1,0,"Try Again");_delay_ms(600);
+		//	St3=StepThree();
+			return 0;
+
+		}
+	}
+	return 0;
+}
+//###############################################################################
+// Step Four [ User Entered (-) for Change the password  ]
+//###############################################################################
+uint8 StepFour(void)
+{
+	volatile uint8 EnteredPassword[NO_PASSWORD];                          //Entered Password From User (array from 5 numbers)
+	static uint8 counter=1;                                               //Counter to count the wrong input password from user
+	volatile uint8 CheckEQ;                                               //Return Value from MC2 to check the Equality of two passwords[0 (NOT EQUAL) or 1 (EQUAL) ]
+//DISPLAYING ON LCD TO ENTER THE PASSWORD
+	LCD_CLEAR();
+	_delay_ms(600);
+	LCD_STR_R_C(0,0,"Please enter the");
+	LCD_STR_R_C(1,0,"password:");
+//RECIEVING FROM USER Through KEYPAD & SENDING FIRST PASSWORD THROUGH UART
+	for(i=0;i<NO_PASSWORD;i++)
+	{
+		EnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		UART_T(EnteredPassword[i]);
+		_delay_ms(600);
+	}
+//DISPLAYING PRESS ON ANY KEY TO CONTINUE
+	LCD_CLEAR();
+	_delay_ms(600);
+	LCD_STR_R_C(0,0,"Press on any key");
+	LCD_STR_R_C(1,0,"to continue.");
+	while(KEYPAD()<0);
+//WAITING THE RESPONSE FROM MC2 TO CHECK EQUALITY
+	CheckEQ=UART_R();
+//########################################################
+	if(CheckEQ==EQUAL)                    //IN CASE OF EQUAL PASSWORDS
+	{
+		return CheckEQ;
+	}
+	else                                   //IN CASE OF NOT-EQUAL PASSWORDS
+	{
+		if (counter ==3)
+		{
+			UART_T(9);
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"ERROR");
+			//Buzzer on
+			_delay_ms(6000);
+			LCD_CLEAR();
+			//buzzer off
+			text=0;
+			return 2;
+			//step two
+		}
+		else
+		{
+			counter++;
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"Not the same");
+			LCD_STR_R_C(1,0,"Try Again");_delay_ms(600);
+			//St4=StepFour();
+			return 0;
+		}
+	}
+
+}
+//######################## MAIN TASKS OF MC1 ##############################################################
+uint8 Tasks(uint8 Startt)
+{
+	uint8 Start=Startt;                      //Check Start (If is it First start or not ) for disp/not disp HELLO on LCD
+	volatile uint8 state;                    //RESPONSE FROM EACH STEP
+	volatile uint8 St1;                      //Step One
+	volatile uint8 St2;                      //Step Two
+
+	if(Start==FIRST_TIME_START)
+	{
+//DISPLAYING HELLO ( FOR THE FIRST TIME APP. START ) #########################################################
+		LCD_CLEAR();LCD_STR("HELLO");_delay_ms(600);
+//STEP_ONE  ##################################################################################################
+		St1=StepOne();
+		while (St1==NOTEQUAL)
+		{
+			LCD_CLEAR();LCD_STR("Not the same.");_delay_ms(600);
+			LCD_CLEAR();LCD_STR("Try Again.");_delay_ms(600);
+			St1=StepOne();
+		}
+	}
+//############################################################################################################
+	if(text==1)
+	{LCD_CLEAR();LCD_STR("Accepted.");_delay_ms(1000);}
+//############################################################################################################
+	text=1;
+//STEP_TWO  ##################################################################################################
+	St2=StepTwo();
+	while (St2==FAULT_RESPONSE){St2=StepTwo();}
+//STEP_THREE  ##################################################################################################
+	if(St2==OPEN_DOOR)
+	{
+		UART_T(3);
+		state= StepThree();
+		while(state==0){state=StepThree();}
+	}
+//STEP_FOUR   ##################################################################################################
+	else if (St2==CHANGE_PASSWORD)
+	{
+		UART_T(4);
+		state= StepFour();
+		while(state==0){state=StepFour();}
+
+	}
+	return state;
+}
+//###########################################################################################################################
+//######################################## MAIN PROGRAM #####################################################################
+//###########################################################################################################################
+int main()
+{
+	SREG |= (1<<7);
+//############### LOCAL VARIABLES ##########################################################################
+	uint8 start=1;
+	volatile uint8 state;                      //RESPONSE FROM EACH STEP
+	UART_ConfigType UART1_M = {data_8,disable,one_bit,AsynchDoubleSpeedMode};
+	Timer1_ConfigType TIM1={0,0,NoPrescaler,Normal_mode};
+	Timer1_setCallBack(CallBackTimer);
+//############# INIT OF EACH PERIPHRALS ###################################################################
+	UART_INIT(&UART1_M);
+	LCD_INIT();
+	TIMER1_INIT(&TIM1);
+//############# MAIN LOOP ####################################################################################
+	while(1)
+	{
+		state=Tasks(start);
+		if(state==1){start=1;}
+		else{start=0;}
+	}
+}
+//########## END ########## END ########## END ########## END ########## END ########## END ########## END ########## END ##########
+
+

@@ -1,0 +1,289 @@
+/*
+ * MainApp.c
+ *
+ *  Created on: Mar 22, 2024
+ *      Author: Admin
+ */
+
+
+#include "LCD.h"
+#include "GPIO.h"
+#include "UART.h"
+#include "KEYPAD.h"
+//#include "TIMER1"
+
+#define No_password 5                                                    //Maximum numbers of password
+
+static uint8 EnteredPassword  [No_password]={1,1,1,1,1};                        //Entered Password From User to create new one
+static uint8 ReEnteredPassword[No_password]={1,1,1,1,1};                        //ReEntered Password to check the password
+
+static uint8 i =0;                                                      //Iterator
+
+void Enter_Password(void)
+{
+	LCD_CLEAR();
+	_delay_ms(1000);
+	LCD_STR_R_C(0,0,"Please enter the");
+	LCD_STR_R_C(1,0,"password:");
+	for(i=0;i<No_password;i++)
+	{
+		EnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		_delay_ms(1000);
+	}
+	_delay_ms(500);
+}
+
+void ReEnter_Password(void)
+{
+	LCD_CLEAR();
+	_delay_ms(1000);
+	LCD_STR_R_C(0,0,"Plz re-enter the");
+	LCD_STR_R_C(1,0,"password:");
+	for(i=0;i<No_password;i++)
+	{
+		ReEnteredPassword[i]=KEYPAD();
+		LCD_STR_R_C(1,(i+10),"*");
+		_delay_ms(1000);
+	}
+	_delay_ms(500);
+}
+uint8 EnterToContinue(void)
+{
+	volatile uint8 InputFromUser;
+	LCD_CLEAR();
+	_delay_ms(1000);
+	LCD_STR_R_C(0,0,"Plz enter ON to ");
+	LCD_STR_R_C(1,0,"continue.");
+	InputFromUser=KEYPAD();
+	if (InputFromUser==13)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+
+}
+void SendFirstPassword()
+{
+	for(i=0;i<No_password;i++)
+	{
+		UART_T(EnteredPassword[i]);
+		_delay_ms(10);
+
+	}
+}
+void SendSecondPassword()
+{
+	_delay_ms(100);
+	for(i=0;i<No_password;i++)
+	{
+		UART_T(ReEnteredPassword[i]);
+		_delay_ms(10);
+	}
+}
+
+uint8 CheckEquality(void)
+{
+	volatile uint8 CheckEQ;
+	CheckEQ=UART_R();
+	return CheckEQ;
+}
+
+
+uint8 StepOne(void)
+{
+	volatile uint8 ret;
+	Enter_Password();
+	while(EnterToContinue()==0){Enter_Password();}
+	LCD_CLEAR();
+	for(i=0;i<5;i++)
+	{
+		LCD_INT(EnteredPassword[i]);_delay_ms(1000);
+	}
+
+	ReEnter_Password();
+	while(EnterToContinue()==0){ReEnter_Password();}
+	LCD_CLEAR();
+	for(i=0;i<5;i++)
+	{
+		LCD_INT(ReEnteredPassword[i]);_delay_ms(1000);
+	}
+	SendFirstPassword();
+	SendSecondPassword();
+	ret=CheckEquality();
+	return ret;
+}
+
+
+
+
+
+uint8 StepTwo(void)
+{
+	volatile uint8  state;
+	LCD_CLEAR();
+	LCD_STR_R_C(0,0,"+ : Open Door   ");
+	LCD_STR_R_C(1,0,"- : Change Pass ");
+	state=KEYPAD();
+	if(state=='+')
+	{
+		//UART_T(3);
+		return 1;
+	}
+	else if (state=='-')
+	{
+		UART_T(4);
+		return 2;
+	}
+	else
+	{
+		UART_T(0);
+		return 0;
+	}
+}
+
+// User Entered (+) for Open the door
+uint8 StepThree(void)
+{
+	static uint8 counter=1;
+
+	volatile uint8 state;
+	Enter_Password();
+	while(EnterToContinue()==0){Enter_Password();}
+	LCD_CLEAR();
+	for(i=0;i<5;i++)
+	{
+		LCD_INT(EnteredPassword[i]);_delay_ms(1000);
+	}
+	_delay_ms(100);
+	SendFirstPassword();
+	state= CheckEquality();
+	if(state)
+	{
+		LCD_CLEAR();
+		LCD_STR_R_C(0,0,"Door's Unlocking");
+		_delay_ms(15000);
+
+		LCD_CLEAR();
+		_delay_ms(3000);
+
+		LCD_STR_R_C(0,0,"Door's locking  ");
+		_delay_ms(15000);
+
+		LCD_CLEAR();
+		return 1;
+		//step one
+		//Task();
+
+	}
+	else
+	{
+		if (counter ==3)
+		{
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"ERROR");
+			//Buzzer on
+			_delay_ms(60000);
+			LCD_CLEAR();
+			//buzzer off
+			return 0;
+			//step two
+		}
+		else
+		{
+			counter++;
+			return StepThree();
+
+		}
+	}
+}
+
+// User Entered (-) for Change the password
+uint8 StepFour(void)
+{
+	static uint8 counter=1;
+
+	volatile uint8 state;
+	Enter_Password();
+	while(EnterToContinue()==0){Enter_Password();}
+	SendFirstPassword();
+	state= CheckEquality();
+	if(state)
+	{
+		return 1;
+		//step1
+		//Task();
+	}
+	else
+	{
+		if (counter ==3)
+		{
+			LCD_CLEAR();
+			LCD_STR_R_C(0,0,"ERROR");
+			//Buzzer on
+			_delay_ms(60000);
+			LCD_CLEAR();
+			//buzzer off
+			return 0;
+			//step two
+		}
+		else
+		{
+			counter++;
+			return StepFour();
+		}
+	}
+
+}
+
+uint8 Tasks(uint8 Startt)
+{
+	uint8 Start=Startt;
+	volatile uint8 state;
+	volatile uint8 steps;
+
+	if(Start==1)
+	{
+		LCD_CLEAR();LCD_STR("HELLO");_delay_ms(1000);
+		while (StepOne()==0){
+			LCD_CLEAR();LCD_STR("Not the same.");_delay_ms(1000);StepOne();
+			LCD_CLEAR();LCD_STR("Try Again.");_delay_ms(1000);StepOne();
+
+		}
+	}
+
+	state=StepTwo();
+	while (state==0){StepTwo();}
+
+	if(state==1)
+	{
+		steps= StepThree();
+
+	}
+	else if (state==2)
+	{
+		steps= StepFour();
+	}
+	return steps;
+}
+
+int main()
+{
+	uint8 start=1;
+	volatile uint8 St_;
+	//UART_ConfigType UART1_M = {data_8,disable,one_bit,AsynchDoubleSpeedMode};
+	UART_INIT(9600);
+	LCD_INIT();
+	while(1)
+	{
+		St_=Tasks(start);
+		if(St_==1){start=1;}
+		else{start=0;}
+	}
+
+}
+
+
